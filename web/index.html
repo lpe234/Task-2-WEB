@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+    <meta charset="UTF-8">
+    <title>环信-实时图表DEMO</title>
+    <link href="static/bootstrap.min.css" rel="stylesheet" />
+    <style>
+        #main-chart {
+            height: 26em;
+        }
+        .btn-outline-001 {
+            color: #1EAEFC;
+            border-color: #1EAEFC;
+        }
+        .btn-outline-001:hover {
+            color: #10A0D0;
+            border-color: #10A0D0;
+            background-color: #F0F0F0;
+        }
+        .btn-outline-002 {
+            color: #4F6EF6;
+            border-color: #4F6EF6;
+        }
+        .btn-outline-002:hover {
+            color: #4060F0;
+            border-color: #4060F0;
+            background-color: #F0F0F0;
+        }
+        .btn-outline-003 {
+            color: #F2A72F;
+            border-color: #F2A72F;
+        }
+        .btn-outline-003:hover {
+            color: #E2A010;
+            border-color: #E2A010;
+            background-color: #F0F0F0;
+        }
+        .btn-outline-004 {
+            color: #39C2B6;
+            border-color: #39C2B6;
+        }
+        .btn-outline-004:hover {
+            color: #30B2B0;
+            border-color: #30B2B0;
+            background-color: #F0F0F0;
+        }
+        .btn-outline-005 {
+            color: #E75253;
+            border-color: #E75253;
+        }
+        .btn-outline-005:hover {
+            color: #E04040;
+            border-color: #E04040;
+            background-color: #F0F0F0;
+        }
+        main {
+            margin: 2em 0;
+        }
+        .cc {
+            margin: 1em 0;
+        }
+        #devices {
+            min-height: 3em;
+            padding: 2px;
+        }
+        #devices div {
+            padding: 1px;
+        }
+        #logs {
+            padding: 2px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <main>
+        <div class="text-center">
+            <div class="container row">
+                <div id="main-chart" class="col-9"></div>
+                <div class="col-3">
+                    <div id="devices" class="card border-info mb-1 text-start fw-lighter h-100 small">
+                        ONLINE DEVICES:
+                    </div>
+                </div>
+            </div>
+            <div class="cc">
+                <div class="btn-toolbar">
+                    <div class="btn-group" id="buttons">
+                    </div>
+                </div>
+            </div>
+            <hr/>
+            <div class="float-start">
+                <button type="button" class="btn btn-outline-primary" id="addBar" onclick="addBar()">ADD BAR</button>
+                <button type="button" class="btn btn-outline-warning" id="reset" onclick="reset()">RESET</button>
+                <button type="button" class="btn btn-outline-info" id="sync" onclick="sync()">SYNC</button>
+                <button type="button" class="btn btn-outline-dark" id="who" onclick="who()">REFRESH ONLINE</button>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script src="static/echarts.js"></script>
+<script src="static/jquery.js"></script>
+<script src="static/bootstrap.bundle.min.js"></script>
+<script src="static/mqttws31.js"></script>
+<script type="text/javascript">
+    // 基于准备好的dom，初始化echarts实例
+    let myChart = echarts.init(document.getElementById('main-chart'));
+
+    // 指定图表的配置项和数据
+    let option = {
+        title: {
+            text: '实时图表DEMO',
+        },
+        tooltip: {},
+        xAxis: {
+            data: ["Eeek", "Aidle",]
+        },
+        yAxis: {
+            type: 'value',
+            minInterval: 1,
+        },
+        series: [{
+            name: 'count',
+            type: 'bar',
+            data: [7, 20,],
+            itemStyle: {
+                normal: {
+                    color: (params) => getColor(params.dataIndex),
+                    label: {
+                        show: true,
+                        position: 'top',
+                    }
+                }
+            },
+
+        }]
+    };
+
+    function getColor(idx) {
+        const colors = ['#1EAEFC', '#4F6EF6', '#F2A72F', '#39C2B6', '#E75253'];
+        return colors[idx % colors.length];
+    }
+
+    function getClass(idx) {
+        const classs = ['btn-outline-001', 'btn-outline-002', 'btn-outline-003', 'btn-outline-004', 'btn-outline-005', ];
+        return classs[idx % classs.length];
+    }
+
+    // 使用刚指定的配置项和数据显示图表。
+    myChart.setOption(option);
+    updateButtons();
+
+    function addBar() {
+        const roleName = randomRole(4, 6);
+        const body = JSON.stringify({
+            'key': 'addBar',
+            'value': roleName,
+            'from': username,
+            'to': 'all'
+        });
+        let message = new Paho.MQTT.Message(body);//set body
+        message.destinationName = topic;// set topic
+        // message.retained = true;
+        mqtt.send(message)
+    }
+
+    /**
+     * 增加Bar
+     */
+    function _addBar(roleName) {
+        option.xAxis.data.push(roleName);
+        option.series[0].data.push(0);
+        myChart.setOption(option);
+        updateButtons();
+    }
+
+    function reset() {
+        const body = JSON.stringify({
+            'key': 'reset',
+            'from': username,
+            'to': 'all'
+        });
+        let message = new Paho.MQTT.Message(body);//set body
+        message.destinationName = topic;// set topic
+        // message.retained = true;
+        mqtt.send(message)
+    }
+
+    function _reset() {
+        option.xAxis.data = ["Eeek", "Aidle",];
+        option.series[0].data = [7, 20,];
+        myChart.setOption(option);
+        updateButtons();
+    }
+
+    function sync() {
+        const body = JSON.stringify({
+            'key': 'sync',
+            'from': username,
+            'to': 'all'
+        });
+        let message = new Paho.MQTT.Message(body);//set body
+        message.destinationName = topic;// set topic
+        // message.retained = true;
+        mqtt.send(message)
+    }
+
+    function _sync() {
+        const body = JSON.stringify({
+            'key': 'syncResp',
+            'value': [option.xAxis.data, option.series[0].data],
+            'from': username,
+            'to': 'all'
+        });
+        let message = new Paho.MQTT.Message(body);//set body
+        message.destinationName = topic;// set topic
+        // message.retained = true;
+        mqtt.send(message)
+    }
+
+    function _syncResp(xdata, sdata) {
+        if (xdata === undefined
+            || sdata === undefined
+            || xdata.length !== sdata.length
+            || option.xAxis.data.length > xdata.length) {
+            return;
+        }
+        option.xAxis.data = xdata;
+        option.series[0].data = sdata;
+        myChart.setOption(option);
+        updateButtons();
+    }
+
+    function showLoading() {
+        $('button').addClass('disabled');
+        myChart.showLoading({
+            text: '数据同步中...',
+            effectOption: {backgroundColor: '#0DCAF0'}
+        });
+    }
+
+    function hideLoading() {
+        $('button').removeClass("disabled");
+        myChart.hideLoading();
+    }
+
+    function randomRole(m, n) {
+        const chars = 'abcdefhijkmnprstwxyz';
+        const charsLen = chars.length;
+        const len = Math.floor((n + 1 - m) * Math.random() + m);
+        let role = '';
+        for (let i = 0; i < len; i++) {
+            let char = chars.charAt(Math.floor(Math.random() * charsLen));
+            if (i === 0) {
+                char = char.toUpperCase();
+            }
+            role += char;
+        }
+        return role;
+    }
+
+    window.onresize = () => {
+        myChart.resize();
+    };
+
+    /**
+     * 点击增加高度
+     */
+    myChart.on('click', function (params) {
+        console.log(params);
+        option.series[0].data[params.dataIndex] = option.series[0].data[params.dataIndex] + 1;
+        myChart.setOption(option);
+    });
+
+    function incrBarVal(idx) {
+        const body = JSON.stringify({
+            'key': 'incrBarVal',
+            'value': idx,
+            'from': username,
+            'to': 'all'
+        });
+        let message = new Paho.MQTT.Message(body);//set body
+        message.destinationName = topic;// set topic
+        // message.retained = true;
+        mqtt.send(message)
+    }
+
+    function _incrBarVal(idx) {
+        option.series[0].data[idx] = option.series[0].data[idx] + 1;
+        myChart.setOption(option);
+    }
+
+    function updateButtons() {
+        const data = option.xAxis.data;
+        let btns = '';
+        for (let i = 0; i < data.length; i++) {
+            btns += '<button class="btn ' + getClass(i) + '" onclick="incrBarVal(' + i + ')">' + data[i] + '(+1)' + '</button>';
+        }
+        $('#buttons').html(btns);
+    }
+
+    function who() {
+        const body = JSON.stringify({
+            'key': 'who',
+            'from': username,
+            'to': 'all'
+        });
+        let message = new Paho.MQTT.Message(body);//set body
+        message.destinationName = topic;// set topic
+        // message.retained = true;
+        mqtt.send(message);
+        whoBeginTime = new Date().getMilliseconds();
+        whos = {};
+        whos[username] = 0;
+        setTimeout(() => {
+            console.log('当前在线客户端：' + JSON.stringify(whos));
+            parseWhos();
+        }, 2000);
+    }
+
+    function parseWhos() {
+        const strings = Object.keys(whos).sort();
+        let ds = 'ONLINE DEVICES('+strings.length+'): <div id="devices" class="float-start">';
+        strings.forEach((s) => {
+            if (s === username) {
+                ds += '<div class="badge border border-secondary text-dark">'+ s +'<span class="badge bg-info rounded-pill">YOU</span></div>';
+            } else {
+                if (whos[s] < 200) {
+                    ds += '<div class="badge border border-secondary text-dark">'+ s +'<span class="badge bg-success rounded-pill">'+whos[s]+'ms</span></div>';
+                } else if (whos[s] < 500) {
+                    ds += '<div class="badge border border-secondary text-dark">'+ s +'<span class="badge bg-warning rounded-pill">'+whos[s]+'ms</span></div>';
+                } else {
+                    ds += '<div class="badge border border-secondary text-dark">'+ s +'<span class="badge bg-error rounded-pill">'+whos[s]+'ms</span></div>';
+                }
+            }
+        });
+        ds += '</div>';
+        $('#devices').html(ds);
+        $('#devices-count').html(strings.length);
+    }
+
+    let whos;
+    let whoBeginTime;
+
+    function _who(data) {
+        if (data.to === "all" && data.from !== username) {
+            const body = JSON.stringify({
+                'key': 'whoResp',
+                'from': username,
+                'to': data.from
+            });
+            let message = new Paho.MQTT.Message(body);//set body
+            message.destinationName = topic;// set topic
+            // message.retained = true;
+            mqtt.send(message)
+        }
+    }
+
+    function whoHandler(data) {
+        if (data.to === username) {
+            let delay = Math.round((new Date().getMilliseconds()-whoBeginTime)/2);
+            if (delay > 0) {  // delay为负数时，可能是上一个轮询的数据包
+                whos[data.from] = delay;
+            }
+        }
+    }
+
+    // ------------- 定义协议
+    /*
+     reset: 执行重置操作
+     incrBarVal: 增加Bar值, 参数: idx(索引值)
+     addBar: 增加Bar, 参数: barName(柱状图名称)
+     sync: 发起同步策略
+     syncResp: 同步处理, 参数: xdata, sdata
+     */
+
+    let needLoading = true;
+
+    // -------------------------------------- 获取用户名
+    const host = '5js7g0.cn1.mqtt.chat'; // 设置当前用户的接入点域名，接入点获取方法请参考接入准备章节文档
+    const port = 443; // WebSocket 协议服务端口，如果是走 HTTPS，设置443端口
+    const topic = 't/chat_demos'; // 需要订阅或发送消息的topic名称
+    const useTLS = true; // 是否走加密 HTTPS，如果走 HTTPS，设置为 true
+    const cleansession = true;
+    const appId = '5js7g0'; // 从console控制台获取
+    const reconnectTimeout = 2000; // 超时重连时间
+    let username;
+    let password = username;
+    let deviceId = 'web-' + username; // MQTT 用户自定义deviceID
+    let clientId = deviceId + '@' + appId; // deviceID@AppID
+    $.get({
+        url: 'https://lemon.lpe234.xyz/common/im/userid/',
+        success: function (data) {
+            username = data.username;
+            password = data.token;
+            deviceId = 'web-' + username;
+            clientId = deviceId + '@' + appId;
+            MQTTconnect();
+        }
+    });
+
+
+    // -------------------------------------- MQTT相关
+
+    // const username = 'demo003' // 用户名，在console中注册
+    // const password = username;
+    // const deviceId = 'web-' + username // MQTT 用户自定义deviceID
+    // const clientId = deviceId + '@' + appId // deviceID@AppID
+
+    let mqtt;
+
+
+    function MQTTconnect() {
+        mqtt = new Paho.MQTT.Client(
+            host,
+            port,
+            clientId
+        );
+
+        let options = {
+            timeout: 3,
+            onSuccess: onConnect,
+            mqttVersion: 4,
+            cleanSession: cleansession,
+            onFailure: function (message) {
+                console.log('fail, try reconnect.....' + JSON.stringify(message));
+                setTimeout(MQTTconnect, reconnectTimeout)
+            }
+        };
+
+        mqtt.onConnectionLost = onConnectionLost;
+        mqtt.onMessageArrived = onMessageArrived;
+
+        if (username != null) {
+            options.userName = username;
+            options.password = password;
+            options.useSSL = useTLS; // 如果使用 HTTPS 加密则配置为 true
+        }
+        mqtt.connect(options)
+    }
+
+    function onConnect() {
+        console.log('connect success');
+        mqtt.subscribe(topic, {qos: 2}); // 订阅消息
+        // mqtt.unsubscribe(topic) // 取消订阅
+        if (needLoading) {
+            needLoading = false;
+            // 同步
+            // showLoading();
+            // sync();
+        }
+        // 刷新在线设备
+        setTimeout(() => who(), 1000);
+    }
+
+    function onConnectionLost(response) {
+        console.log('connection lost: ' + JSON.stringify(response));
+        setTimeout(MQTTconnect, reconnectTimeout);
+        needLoading = true;
+    }
+
+    function onMessageArrived(message) {
+        console.log("message arrived: " + JSON.stringify({
+            'payloadString': message.payloadString,
+            'qos': message.qos,
+            'retained': message.retained,
+            'duplicate': message.duplicate,
+            'destinationName': message.destinationName,
+        }));
+        const payload = message.payloadString;
+        const orderKey = JSON.parse(payload);
+        const key = orderKey['key'];
+        const value = orderKey['value'];
+        switch (key) {
+            case 'incrBarVal': {
+                _incrBarVal(value);
+                break;
+            }
+            case 'addBar': {
+                _addBar(value);
+                break;
+            }
+            case 'reset': {
+                _reset();
+                break;
+            }
+            case 'sync': {
+                _sync();
+                break;
+            }
+            case 'syncResp': {
+                _syncResp(value[0], value[1]);
+                if (needLoading) {
+                    needLoading = false;
+                    // hideLoading();
+                }
+                break;
+            }
+            case 'who': {
+                _who(orderKey);
+                break;
+            }
+            case 'whoResp': {
+                whoHandler(orderKey);
+                break;
+            }
+            default: {
+                console.error('unknown orderKey...')
+            }
+        }
+    }
+
+</script>
+</body>
+</html>
