@@ -380,19 +380,19 @@
     let needLoading = true;
 
     // -------------------------------------- 获取用户名
-    const host = '5js7g0.cn1.mqtt.chat'; // 设置当前用户的接入点域名，接入点获取方法请参考接入准备章节文档
+    const host = 'xxx.mqtt.chat'; // TODO: 设置当前用户的接入点域名，接入点获取方法请参考接入准备章节文档
     const port = 443; // WebSocket 协议服务端口，如果是走 HTTPS，设置443端口
-    const topic = 't/chat_demos'; // 需要订阅或发送消息的topic名称
+    const topic = 't/chat_demo'; // 需要订阅或发送消息的topic名称
     const useTLS = true; // 是否走加密 HTTPS，如果走 HTTPS，设置为 true
     const cleansession = true;
-    const appId = '5js7g0'; // 从console控制台获取
+    const appId = 'xxx'; // TODO: 从console控制台获取
     const reconnectTimeout = 2000; // 超时重连时间
     let username;
     let password = username;
     let deviceId = 'web-' + username; // MQTT 用户自定义deviceID
     let clientId = deviceId + '@' + appId; // deviceID@AppID
     $.get({
-        url: 'https://lemon.lpe234.xyz/common/im/userid/',
+        url: 'https://xxx.xx.xx/common/im/userid/',  // TODO: 获取username、password接口
         success: function (data) {
             username = data.username;
             password = data.token;
