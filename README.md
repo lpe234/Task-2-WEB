@@ -20,6 +20,10 @@ sync: 发起同步策略
 syncResp: 同步处理, 参数: xdata, sdata
 ```
 
+需要去环信官网申请MQTT应用。[https://www.easemob.com/product/mqtt](https://www.easemob.com/product/mqtt)
+
+并在`main.js`中做相应设置，具体见代码`TODO:`注释描述。
+
 
 预览图：
 
